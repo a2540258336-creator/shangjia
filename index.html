@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>上架清单</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='8' y='6' width='48' height='54' rx='7' fill='%232b579a'/%3E%3Crect x='20' y='1' width='24' height='11' rx='4' fill='%231e3f73'/%3E%3Crect x='16' y='22' width='32' height='5' rx='2.5' fill='%23fff'/%3E%3Crect x='16' y='33' width='32' height='5' rx='2.5' fill='%23fff'/%3E%3Crect x='16' y='44' width='20' height='5' rx='2.5' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✅</text></svg>">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Microsoft YaHei", "PingFang SC", sans-serif; background: #eef0f3; color: #1c2330; padding: 28px 24px; font-size: 14px; line-height: 1.6; }
+  .wrap { max-width: 1240px; margin: 0 auto; background: #fff; border: 1px solid #d5d9e0; box-shadow: 0 2px 14px rgba(28,35,48,.07); padding: 34px 40px 40px; }
+
+  /* ── 页头 ── */
+  .doc-head { position: relative; display: flex; align-items: baseline; gap: 14px; padding-bottom: 14px; border-bottom: 2px solid #2c3444; flex-wrap: wrap; }
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: 1px; color: #1c2330; }
+  h1::before { content: ""; display: inline-block; width: 5px; height: 20px; background: #2c3444; border-radius: 2px; margin-right: 10px; vertical-align: -2px; }
+  .meta { font-size: 13px; color: #6b7280; }
+  .meta b { color: #1c2330; font-weight: 600; }
+  .meta .sep { margin: 0 8px; color: #c3c8d2; }
+  .sub { margin-top: 8px; font-size: 12px; color: #8a919e; }
+  #lockBtn { position: absolute; right: 0; top: 50%; transform: translateY(-50%); padding: 6px 16px; font-size: 14px; border: 1px solid #c5cad3; background: #fff; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+  #lockBtn:hover { background: #2c3444; color: #fff; border-color: #2c3444; }
+  #lockBtn.on { background: #b4322c; color: #fff; border-color: #b4322c; }
+
+  /* ── 日期条 ── */
+  #dateBar { position: sticky; top: 0; z-index: 30; display: flex; gap: 10px; overflow-x: auto; padding: 10px 4px; margin-top: 4px; background: #fff; border-bottom: 1px solid #d5d9e0; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+  #dateBar::-webkit-scrollbar { height: 4px; }
+  #dateBar::-webkit-scrollbar-thumb { background: #c9cfdd; border-radius: 2px; }
+  .date-tab { flex: 0 0 auto; padding: 5px 2px; font-size: 14px; color: #4a5262; cursor: pointer; white-space: nowrap; user-select: none; border-bottom: 2px solid transparent; }
+  .date-tab:hover { color: #2c3444; }
+  .date-tab.active { color: #1c2330; font-weight: 700; border-bottom-color: #2c3444; }
+  .date-tab .cnt { font-weight: 400; font-size: 12px; opacity: .55; margin-left: 5px; }
+
+  /* ── 表格：清爽横线风格 ── */
+  table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 16px; background: #fff; border-radius: 10px; box-shadow: 0 1px 5px rgba(28,35,48,.09); }
+  th:first-child { border-top-left-radius: 9px; }
+  th:last-child { border-top-right-radius: 9px; }
+  tbody tr:last-child td:first-child { border-bottom-left-radius: 9px; }
+  tbody tr:last-child td:last-child { border-bottom-right-radius: 9px; }
+  th, td { padding: 10px 12px; text-align: left; font-size: 13.5px; vertical-align: middle; border-bottom: 1px solid #eef0f3; }
+  th { background: #f5f6f8; color: #4a5262; font-size: 13px; font-weight: 600; text-align: center; position: sticky; top: 41px; border-bottom: 1.5px solid #d5d9e0; white-space: nowrap; }
+  th.chk-col { min-width: 56px; }
+  tr:hover td { background: #f8fafc; }
+  img.thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; cursor: pointer; transition: transform .15s; }
+  img.thumb:hover { transform: scale(1.6); box-shadow: 0 4px 16px rgba(0,0,0,.25); position: relative; z-index: 5; }
+  .cat { font-weight: 700; white-space: nowrap; color: #1c2330; }
+  .desc { color: #6b7280; font-size: 12px; margin-top: 2px; }
+  .price { font-family: Consolas, "Courier New", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+  .expect { color: #6b7280; }
+  .diff { font-weight: 700; white-space: nowrap; text-align: right; font-family: Consolas, "Courier New", monospace; }
+  .diff.up { color: #b4322c; }
+  .diff.ok { color: #1e7a34; }
+  .diff .pct { margin-left: 5px; font-size: 11.5px; opacity: .8; }
+  a.link { color: #1d4fa1; text-decoration: none; font-size: 13px; word-break: break-all; }
+  a.link:hover { text-decoration: underline; }
+  .copybtn { margin-left: 6px; padding: 2px 9px; font-size: 12px; border: 1px solid #c5cad3; background: #fff; color: #4a5262; border-radius: 3px; cursor: pointer; }
+  .copybtn:hover { background: #2c3444; color: #fff; border-color: #2c3444; }
+  .copybtn.ok { background: #1e7a34; color: #fff; border-color: #1e7a34; }
+  .warn { color: #9a6a08; font-size: 12px; }
+  .total td { background: #f5f6f8; font-weight: 700; border-top: 1.5px solid #d5d9e0; border-bottom: none; }
+  tr.done td { opacity: .4; text-decoration: line-through; }
+  tr.done td.chk { text-decoration: none; opacity: 1; }
+  input.mark { width: 16px; height: 16px; cursor: pointer; accent-color: #1e7a34; display: block; margin: 0 auto; }
+  td.chk { text-align: center; }
+
+  /* ── 日期分组行 ── */
+  tr.date-row td { background: #f0f4f9; cursor: pointer; border-top: 1px solid #e0e5ee; border-bottom: 1px solid #e0e5ee; }
+  tr.date-row td:hover { background: #e6ecf5 !important; }
+  .date-name { font-weight: 700; font-size: 14px; letter-spacing: 1px; }
+  button.fold { margin-left: auto; float: right; padding: 2px 12px; font-size: 12.5px; border: 1px solid #c5cad3; background: #fff; border-radius: 3px; cursor: pointer; }
+  button.fold:hover { background: #2c3444; color: #fff; border-color: #2c3444; }
+  tr[data-date].folded { display: none; }
+  tr.date-row.folded td { display: table-cell; }
+
+  /* ── 锁定警示与备注卡 ── */
+  tr.lock-warn td { background: #fff3bf !important; }
+  tr.lock-warn:hover td { background: #ffe58f !important; }
+  .lock-note { position: absolute; z-index: 50; background: #fffbe6; border: 1px solid #f0d47a; border-left: 4px solid #b4322c; border-radius: 4px; padding: 10px 12px; width: 240px; box-shadow: 0 4px 16px rgba(0,0,0,.15); font-size: 13px; }
+  .lock-note h3 { font-size: 13px; margin: 0 0 6px; color: #b4322c; }
+  .lock-note input { width: 100%; box-sizing: border-box; padding: 6px 8px; font-size: 13px; border: 1px solid #f0d47a; border-radius: 3px; background: #fffdf0; color: #614a00; outline: none; }
+  .lock-note input:focus { border-color: #b4322c; background: #fff; }
+  .lock-note { max-width: calc(100vw - 24px); }
+
+  /* ── 手机适配（≤680px：极紧凑清单，一眼全览） ── */
+  @media (max-width: 680px) {
+    body { padding: 6px; font-size: 12px; }
+    .wrap { padding: 14px 10px 18px; }
+    .doc-head { display: block; padding-right: 88px; padding-bottom: 8px; }
+    h1 { font-size: 17px; }
+    h1::before { width: 4px; height: 15px; margin-right: 7px; vertical-align: -1px; }
+    .meta { display: block; margin-top: 3px; font-size: 10.5px; line-height: 1.4; }
+    .meta .sep { margin: 0 2px; }
+    .sub { margin-top: 2px; font-size: 10px; }
+    #lockBtn { padding: 4px 10px; font-size: 12px; }
+    #dateBar { padding: 5px 2px; }
+    .date-tab { font-size: 12px; }
+    .date-tab .cnt { font-size: 10px; margin-left: 3px; }
+
+    table { margin-top: 4px; box-shadow: none; border-radius: 0; background: transparent; }
+    thead { display: none; }
+    td { display: block; border: none !important; padding: 1px 0; }
+
+    tr.date-row { display: block; margin: 8px 0 2px; }
+    tr.date-row td { display: flex; align-items: center; padding: 4px 10px; border-radius: 6px; }
+    .date-name { font-size: 13px; }
+    button.fold { float: none; margin-left: auto; padding: 1px 9px; font-size: 11px; }
+
+    tr[data-item] { display: block; position: relative; margin: 0; padding: 6px 8px 6px 0; border-bottom: 1px solid #eef0f3; background: transparent; }
+    td.chk { position: absolute; left: 7px; top: 9px; padding: 0; }
+    input.mark { width: 14px; height: 14px; }
+    tr[data-item] td:nth-child(2) { position: absolute; left: 25px; top: 6px; padding: 0; }
+    tr[data-item] td:nth-child(2) img.thumb { width: 28px; height: 28px; border-radius: 5px; }
+    tr[data-item] td:nth-child(3),
+    tr[data-item] td:nth-child(4),
+    tr[data-item] td:nth-child(5),
+    tr[data-item] td:nth-child(8) { margin-left: 58px; }
+    tr[data-item] td:nth-child(6) { margin-left: 0; }
+    .cat { display: inline; font-size: 13px; }
+    .desc { display: inline; margin-left: 3px; font-size: 10px; }
+    tr[data-item] td:nth-child(4) { color: #5a6270; font-size: 11px; }
+    tr[data-item] td .warn { display: inline; font-size: 10px; }
+    tr[data-item] td:nth-child(4) .warn::before { content: " · "; color: #c3c8d2; }
+    td.price { display: inline; text-align: left; font-size: 12px; }
+    tr[data-item] td:nth-child(5) { margin-top: 4px; }
+    tr[data-item] td:nth-child(5)::before { content: "网页价 "; color: #8a919e; font-size: 9.5px; }
+    tr[data-item] td:nth-child(6)::before { content: " → 预期 "; color: #8a919e; font-size: 9.5px; }
+    td.diff { display: inline-block; text-align: left; margin-left: 3px; padding: 2px 8px; border-radius: 999px; background: #eef0f3; }
+    tr[data-item] td.diff.up { background: #fce9e8; }
+    tr[data-item] td.diff.ok { background: #e6f3ea; }
+    .diff .pct { display: inline; margin-left: 0; font-size: 12px; opacity: 1; }
+    .diff .dv { display: none; }
+    tr[data-item] td:nth-child(8) { margin-top: 2px; }
+    a.link { font-size: 0; color: #1d4fa1; }
+    a.link::after { content: "打开商品页 ↗"; font-size: 11px; }
+    .copybtn { padding: 1px 7px; font-size: 10.5px; margin-left: 4px; }
+
+    tr.total { display: block; background: #f5f6f8; border-radius: 8px; margin-top: 8px; padding: 7px 12px; }
+    tr.total td { display: inline; padding: 0; font-size: 12px; }
+    tr.total td:first-child { display: block; margin-bottom: 2px; }
+    tr.total td:nth-child(2) { margin-right: 10px; }
+
+    /* 锁定备注卡手机端：插进行内随文档流撑开，不再悬浮盖住下一行 */
+    .lock-note { position: static; width: auto; max-width: none; margin: 6px 0 2px; box-shadow: none; display: block; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="doc-head">
+    <button id="lockBtn">🔒 锁定</button>
+    <h1>上架清单</h1>
+    <div class="meta">2026-11-13 核对<span class="sep">｜</span>手写报价单 × 苏宁易购实价</div>
+    <div class="sub">网页价为核对时实价，下单以页面为准 ｜ 鼠标悬停缩略图可放大</div>
+  </div>
+
+  <div id="dateBar"></div>
+<table>
+    <thead>
+      <tr>
+        <th class="chk-col">已上架</th>
+        <th>图片</th><th>类目</th><th>苏宁对应商品</th><th>网页价</th><th>预期价</th><th>差价</th><th>链接</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="date-row" data-group="11.13"><td colspan="8"><span class="date-name">11.13</span><button class="fold" data-g="11.13">收起</button></td></tr>
+      <tr data-date="11.13" data-item="9V 电池"><td class="chk"><input type="checkbox" class="mark"></td>
+        <td><img class="thumb" src="样图搜集/9V电池/01-产品图.png" alt="9V电池"></td>
+        <td><div class="cat">9V 电池</div><div class="desc">实物：公牛高能锂电</div></td>
+        <td>松下 9V 碳性 6F22ND 1粒装（自营）</td>
+        <td class="price">¥9.90/节</td>
+        <td class="price expect">5 元/节</td>
+        <td class="diff up"><span class="dv">+4.90</span><span class="pct">+98%</span></td>
+        <td><a class="link" href="https://product.suning.com/0000000000/12453481233.html" target="_blank">product.suning.com/…/12453481233.html</a><button class="copybtn" title="复制链接">复制</button></td>
+      </tr>
+      <tr data-date="11.13" data-item="电工胶布"><td class="chk"><input type="checkbox" class="mark"></td>
+        <td><img class="thumb" src="样图搜集/PVC电工胶带/01-产品图.png" alt="PVC电工胶带"></td>
+        <td><div class="cat">电工胶布</div><div class="desc">实物：合亚达 PVC 600V</div></td>
+        <td>舒氏 PVC电气阻燃胶带 10yd×18mm</td>
+        <td class="price">¥4.00/卷</td>
+        <td class="price expect">3 元/卷</td>
+        <td class="diff ok"><span class="dv">+1.00</span><span class="pct">+33%</span></td>
+        <td><a class="link" href="https://product.suning.com/0071623225/12445831968.html" target="_blank">product.suning.com/…/12445831968.html</a><button class="copybtn" title="复制链接">复制</button></td>
+      </tr>
+      <tr data-date="11.13" data-item="暗锁压把"><td class="chk"><input type="checkbox" class="mark"></td>
+        <td><img class="thumb" src="样图搜集/暗锁压把/01-产品图.jpg" alt="暗锁压把"></td>
+        <td><div class="cat">暗锁压把</div><div class="desc">实物：不锈钢执手面板</div></td>
+        <td>裕合昇 不锈钢室内门锁 孔距50mm（自营，整套）<div class="warn">苏宁无单卖压把</div></td>
+        <td class="price">¥64.80/套</td>
+        <td class="price expect">25 元/套</td>
+        <td class="diff up"><span class="dv">+39.80</span><span class="pct">+159%</span></td>
+        <td><a class="link" href="https://product.suning.com/0000000000/12425743415.html" target="_blank">product.suning.com/…/12425743415.html</a><button class="copybtn" title="复制链接">复制</button></td>
+      </tr>
+            <tr data-date="11.13" data-item="厨房大铲子"><td class="chk"><input type="checkbox" class="mark"></td>
+        <td><img class="thumb" src="样图搜集/白钢铲/01-产品图.jpg" alt="白钢铲"></td>
+        <td><div class="cat">厨房大铲子</div><div class="desc">实物：不锈钢长柄铲</div></td>
+        <td>金龙航 全钢长柄大铲 铲头16×16cm 总长97cm<div class="warn">一米长柄同款最低（橙亿鸿103cm¥112更贵）</div></td>
+        <td class="price">¥90.00/个</td>
+        <td class="price expect">5 元/个</td>
+        <td class="diff up"><span class="dv">+85.00</span><span class="pct">+1700%</span></td>
+        <td><a class="link" href="https://product.suning.com/0071624060/12451352291.html" target="_blank">product.suning.com/…/12451352291.html</a><button class="copybtn" title="复制链接">复制</button></td>
+      </tr>
+            <tr data-date="11.13" data-item="白钢水舀子"><td class="chk"><input type="checkbox" class="mark"></td>
+        <td><img class="thumb" src="样图搜集/白钢水舀子/01-产品图.jpg" alt="白钢水舀子"></td>
+        <td><div class="cat">白钢水舀子</div><div class="desc">实物：不锈钢水舀</div></td>
+        <td>兰雅昀 不锈钢水勺 14cm（已验材质）<div class="warn">品类最低价</div></td>
+        <td class="price">¥29.00/个</td>
+        <td class="price expect">15 元/个</td>
+        <td class="diff up"><span class="dv">+14.00</span><span class="pct">+93%</span></td>
+        <td><a class="link" href="https://product.suning.com/0071617698/12445388263.html" target="_blank">product.suning.com/…/12445388263.html</a><button class="copybtn" title="复制链接">复制</button></td>
+      </tr>
+      <tr data-date="11.13" data-item="彩钢钉"><td class="chk"><input type="checkbox" class="mark"></td>
+        <td><img class="thumb" src="样图搜集/彩钢钉/01-产品图.jpg" alt="彩钢钉"></td>
+        <td><div class="cat">彩钢钉</div><div class="desc">实物：大和尖头峰钻尾丝</div></td>
+        <td>易企采 M5.5×80 50颗装 六角钻尾（自营）</td>
+        <td class="price">¥39.00/盒</td>
+        <td class="price expect">35 元/盒</td>
+        <td class="diff ok"><span class="dv">+4.00</span><span class="pct">+11%</span></td>
+        <td><a class="link" href="https://product.suning.com/0000000000/12432938880.html" target="_blank">product.suning.com/…/12432938880.html</a><button class="copybtn" title="复制链接">复制</button></td>
+      </tr>
+      <tr data-date="11.13" data-item="大棚胶带"><td class="chk"><input type="checkbox" class="mark"></td>
+        <td><img class="thumb" src="样图搜集/大卷胶带/01-产品图.jpg" alt="大卷胶带"></td>
+        <td><div class="cat">大棚胶带</div><div class="desc">实物：蓝色宽幅大卷</div></td>
+        <td>淞水透明胶带 55mm×100m <span class="warn">（苏宁无蓝色款，透明替代）</span></td>
+        <td class="price">¥13.30/卷</td>
+        <td class="price expect">10 元/卷</td>
+        <td class="diff ok"><span class="dv">+3.30</span><span class="pct">+33%</span></td>
+        <td><a class="link" href="https://product.suning.com/0071620287/12447437223.html" target="_blank">product.suning.com/…/12447437223.html</a><button class="copybtn" title="复制链接">复制</button></td>
+      </tr>
+      <tr data-date="11.13" data-item="防风胶带"><td class="chk"><input type="checkbox" class="mark"></td>
+        <td><img class="thumb" src="样图搜集/防风胶带/01-产品图.jpg" alt="防风胶带"></td>
+        <td><div class="cat">防风胶带</div><div class="desc">实物：锋临 门窗缝隙</div></td>
+        <td>杉外山 无痕封窗防风胶带 48宽×15m<div class="warn">品类最低价</div></td>
+        <td class="price">¥13.00/卷</td>
+        <td class="price expect">5 元/卷</td>
+        <td class="diff up"><span class="dv">+8.00</span><span class="pct">+160%</span></td>
+        <td><a class="link" href="https://product.suning.com/0010363584/12450095345.html" target="_blank">product.suning.com/…/12450095345.html</a><button class="copybtn" title="复制链接">复制</button></td>
+      </tr>
+      <tr data-date="11.13" data-item="高压橡胶自粘带"><td class="chk"><input type="checkbox" class="mark"></td>
+        <td><img class="thumb" src="样图搜集/高压橡胶自粘带/01-产品图.png" alt="高压橡胶自粘带"></td>
+        <td><div class="cat">高压橡胶自粘带</div><div class="desc">实物：京峰 J-10</div></td>
+        <td>舒氏 S10 25mm×5yd×0.8mm（同规格）</td>
+        <td class="price">¥12.50/卷</td>
+        <td class="price expect">≈10 元/卷</td>
+        <td class="diff ok"><span class="dv">+2.50</span><span class="pct">+25%</span></td>
+        <td><a class="link" href="https://product.suning.com/0071623225/12445855623.html" target="_blank">product.suning.com/…/12445855623.html</a><button class="copybtn" title="复制链接">复制</button></td>
+      </tr>
+      <tr data-date="11.13" data-item="5号电池"><td class="chk"><input type="checkbox" class="mark"></td>
+        <td><img class="thumb" src="样图搜集/南孚5号电池/01-产品图.jpg" alt="南孚5号电池"></td>
+        <td><div class="cat">5号电池</div><div class="desc">实物：南孚聚能环 2粒</div></td>
+        <td>南孚碱性5号 2节/卡（自营）</td>
+        <td class="price">¥19.50/卡</td>
+        <td class="price expect">≈5 元/节</td>
+        <td class="diff up"><span class="dv">+4.75/节</span><span class="pct">+95%</span></td>
+        <td><a class="link" href="https://product.suning.com/0000000000/12453943747.html" target="_blank">product.suning.com/…/12453943747.html</a><button class="copybtn" title="复制链接">复制</button></td>
+      </tr>
+<tr data-date="11.13" data-item="塑料布"><td class="chk"><input type="checkbox" class="mark"></td>
+        <td>—</td>
+        <td><div class="cat">塑料布</div><div class="desc">无实物照片</div></td>
+        <td><span class="warn">苏宁无按米零售，电商均为整卷 → 建议线下五金店买</span></td>
+        <td class="price">—</td>
+        <td class="price expect">3 元/米</td>
+        <td class="diff">—</td>
+        <td>—</td>
+      </tr>
+                  <tr class="total">
+        <td colspan="4">合计（10 件有链接商品）</td>
+        <td class="price">¥282.50</td>
+        <td class="diff up">预期约 ¥113 → +¥169.50</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+<script>
+(function(){
+  var KEY = "cg-checked";
+  var saved = JSON.parse(localStorage.getItem(KEY) || "{}");
+  var rows = document.querySelectorAll("tr[data-item]");
+  function apply(r, on){
+    r.classList.toggle("done", on);
+    r.querySelector(".mark").checked = on;
+  }
+  rows.forEach(function(r){
+    var name = r.getAttribute("data-item");
+    apply(r, !!saved[name]);
+    r.querySelector(".mark").addEventListener("change", function(e){
+      saved[name] = e.target.checked;
+      localStorage.setItem(KEY, JSON.stringify(saved));
+      apply(r, e.target.checked);
+    });
+  });
+})();
+</script>
+<script>
+document.querySelectorAll(".copybtn").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    var a = btn.previousElementSibling;
+    var url = a ? a.href : "";
+    function done(ok){
+      btn.textContent = ok ? "已复制" : "失败";
+      btn.classList.toggle("ok", ok);
+      setTimeout(function(){ btn.textContent = "复制"; btn.classList.remove("ok"); }, 1500);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function(){ done(true); }, function(){ fallback(); });
+    } else { fallback(); }
+    function fallback(){
+      var t = document.createElement("textarea");
+      t.value = url; document.body.appendChild(t); t.select();
+      var ok = document.execCommand("copy");
+      document.body.removeChild(t);
+      done(ok);
+    }
+  });
+});
+</script>
+<script>
+(function(){
+  var LKEY = "cg-locked";
+  var btn = document.getElementById("lockBtn");
+  var rows = document.querySelectorAll("tr[data-item]");
+  var catNames = {};
+  document.querySelectorAll("tr[data-item]").forEach(function(r){
+    var c = r.querySelector(".cat");
+    if (c) catNames[r.getAttribute("data-item")] = c.textContent.trim();
+  });
+  function unchecked(){
+    return Array.prototype.filter.call(rows, function(r){
+      return !r.querySelector(".mark").checked;
+    });
+  }
+  function apply(locked, showModal){
+    rows.forEach(function(r){
+      r.classList.toggle("lock-warn", locked && !r.querySelector(".mark").checked);
+      r.querySelector(".mark").disabled = locked;
+    });
+    btn.classList.toggle("on", locked);
+    btn.textContent = locked ? "🔓 解锁" : "🔒 锁定";
+    renderNote(locked, showModal);
+  }
+  var notes = {};  // item -> card element
+  function renderNote(locked){
+    Object.keys(notes).forEach(function(k){
+      if (!locked || !document.querySelector('tr[data-item="'+CSS.escape(k)+'"]') ||
+          document.querySelector('tr[data-item="'+CSS.escape(k)+'"]').querySelector(".mark").checked){
+        notes[k].remove(); delete notes[k];
+      }
+    });
+    if (!locked) return;
+    unchecked().forEach(function(r){
+      var item = r.getAttribute("data-item");
+      if (!notes[item]){
+        var card = document.createElement("div");
+        card.className = "lock-note";
+        var h = document.createElement("h3");
+        h.textContent = "⚠️ 未上架 · " + (catNames[item] || item);
+        var inp = document.createElement("input");
+        inp.type = "text"; inp.placeholder = "备注：点这里输入…";
+        var nk = "cg-note-" + item;
+        inp.value = localStorage.getItem(nk) || "";
+        inp.addEventListener("input", function(){ localStorage.setItem(nk, inp.value); });
+        card.appendChild(h); card.appendChild(inp);
+        document.body.appendChild(card);
+        notes[item] = card;
+      }
+    });
+    // 定位：桌面贴行右侧浮层，手机插入行内随文档流
+    Object.keys(notes).forEach(function(item){
+      var r = document.querySelector('tr[data-item="'+CSS.escape(item)+'"]');
+      if (!r) return;
+      var card = notes[item];
+      if (window.innerWidth < 680) {
+        var td = r.querySelector("td:nth-child(8)");
+        if (td && card.parentElement !== td) td.appendChild(card);
+        card.style.left = ""; card.style.top = "";
+      } else {
+        if (card.parentElement !== document.body) document.body.appendChild(card);
+        var rect = r.getBoundingClientRect();
+        var left = rect.right + window.scrollX + 14;
+        if (left + 254 > document.documentElement.clientWidth + window.scrollX)
+          left = document.documentElement.clientWidth + window.scrollX - 254;
+        card.style.left = left + "px";
+        card.style.top = (rect.top + window.scrollY - 4) + "px";
+      }
+    });
+  }
+  window.__renderNote = function(){ renderNote(localStorage.getItem(LKEY) === "1"); };
+  window.addEventListener("resize", window.__renderNote);
+  btn.addEventListener("click", function(){
+    var locked = localStorage.getItem(LKEY) !== "1";
+    localStorage.setItem(LKEY, locked ? "1" : "0");
+    apply(locked, locked);
+  });
+  apply(localStorage.getItem(LKEY) === "1", false);
+})();
+</script>
+
+<script>
+(function(){
+  var FKEY = "cg-fold";
+  var saved = JSON.parse(localStorage.getItem(FKEY) || "{}");
+  function applyGroup(g, folded){
+    document.querySelectorAll('tr[data-date="'+g+'"]').forEach(function(r){ r.classList.toggle("folded", folded); });
+    var row = document.querySelector('.date-row[data-group="'+g+'"]');
+    if (row){
+      row.classList.remove("folded");
+      row.querySelector(".fold").textContent = folded ? "展开 ("+document.querySelectorAll('tr[data-date="'+g+'"]').length+"项)" : "收起";
+    }
+    saved[g] = folded;
+    localStorage.setItem(FKEY, JSON.stringify(saved));
+    if (window.__renderNote) setTimeout(window.__renderNote, 0);
+  }
+  window.__unfoldGroup = function(g){ applyGroup(g, false); };
+  document.querySelectorAll(".date-row").forEach(function(row){
+    var g = row.getAttribute("data-group");
+    row.addEventListener("click", function(e){
+      if (e.target.classList.contains("fold") || e.target.classList.contains("date-name") || e.target.tagName === "TD"){
+        applyGroup(g, !(saved[g] === true));
+      }
+    });
+    applyGroup(g, saved[g] === true);
+  });
+})();
+</script>
+<script>
+(function(){
+  var bar = document.getElementById("dateBar");
+  function build(){
+    var dates = [];
+    document.querySelectorAll("tr[data-date]").forEach(function(r){
+      var d = r.getAttribute("data-date");
+      if (dates.indexOf(d) === -1) dates.push(d);
+    });
+    bar.innerHTML = "";
+    dates.forEach(function(d){
+      var cnt = document.querySelectorAll('tr[data-date="'+d+'"][data-item]').length;
+      var t = document.createElement("div");
+      t.className = "date-tab";
+      t.setAttribute("data-d", d);
+      t.innerHTML = "" + d + '<span class="cnt">' + cnt + "项</span>";
+      t.addEventListener("click", function(){
+        var row = document.querySelector('.date-row[data-group="'+d+'"]');
+        if (window.__unfoldGroup) window.__unfoldGroup(d);
+        if (row) row.scrollIntoView({behavior:"smooth", block:"start"});
+        bar.querySelectorAll(".date-tab").forEach(function(x){ x.classList.remove("active"); });
+        t.classList.add("active");
+      });
+      bar.appendChild(t);
+    });
+    var first = bar.querySelector(".date-tab");
+    if (first) first.classList.add("active");
+  }
+  build();
+  window.__rebuildDateBar = build;
+})();
+</script>
+</body>
+</html>
